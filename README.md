@@ -38,6 +38,7 @@ SmartLoanAI is a full-stack financial intelligence application designed to moder
 - [Demo Personas](#demo-personas)
 - [Step-by-Step Demonstration Walkthrough](#step-by-step-demonstration-walkthrough)
 - [Regulatory and Ethical Considerations](#regulatory-and-ethical-considerations)
+- [Project Team & Contributors](#project-team--contributors)
 - [License](#license)
 
 ---
@@ -352,6 +353,15 @@ You may also register a new applicant account directly through the registration 
 - **Model Interpretability**: Unlike opaque deep learning models, XGBoost combined with SHAP feature attributions enables defensible and compliant explanations for credit decisions under fair lending guidelines.
 - **Data Protection**: Document attachments are restricted by file signature, capped at 10 MB per attachment, and stored in isolated storage directories.
 - **Dataset Notice**: All dataset records and credit histories in `dataset/loan_data.csv` are synthetically generated for educational, development, and research purposes.
+
+---
+
+## Project Team & Contributors
+
+This platform is developed as a collaborative college project by:
+
+- **Pranshu Pachisia** - Machine Learning & Backend Architecture ([@pranshupachisia1756](https://github.com/pranshupachisia1756))
+- **Manas Gupta** - Full Stack Development & Contributor ([@Manas-Gupta16](https://github.com/Manas-Gupta16))
 
 ---
 

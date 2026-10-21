@@ -3,6 +3,17 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "contributors": [
+    {
+      "name": "Pranshu Pachisia",
+      "url": "https://github.com/pranshupachisia1756"
+    },
+    {
+      "name": "Manas Gupta",
+      "email": "manasg30361@gmail.com",
+      "url": "https://github.com/Manas-Gupta16"
+    }
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
