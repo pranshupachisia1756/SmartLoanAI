@@ -1,0 +1,40 @@
+# Environment Variables and Secrets
+.env
+*.env
+!.env.example
+
+# Databases and Backups
+*.db
+*.sqlite
+*.sqlite3
+backups/
+
+# User Uploaded Documents
+uploads/
+
+# Python Virtual Environments & Caches
+.venv/
+backend/venv/
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.pytest_cache/
+.coverage
+htmlcov/
+
+# Node & Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+.npm
+*.log
+
+# IDE & OS Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
