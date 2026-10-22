@@ -10,7 +10,8 @@
 backups/
 
 # User Uploaded Documents
-uploads/
+uploads/*
+!uploads/.gitkeep
 
 # Python Virtual Environments & Caches
 .venv/

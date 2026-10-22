@@ -105,7 +105,16 @@ function App() {
     "Income Proof",
     "Bank Statement",
     "Employment / Business Proof",
+    "Current Address Proof",
   ];
+  const docSubtitles = {
+    "PAN Card": "Mandatory Tax ID & Identity Verification",
+    "Aadhaar / KYC": "OVD / Address & Citizen Verification",
+    "Income Proof": "Latest 3-6 Months Salary Slips or ITR with Computation",
+    "Bank Statement": "Past 6 Months Bank Statement with salary/business inflows",
+    "Employment / Business Proof": "Employee ID Card / Appointment Letter / Business GSTIN",
+    "Current Address Proof": "Recent Electricity Bill / Water Bill / Rent Agreement",
+  };
   const [documents, setDocuments] = useState([]);
   const [docCompleteness, setDocCompleteness] = useState(0);
   const [documentFiles, setDocumentFiles] = useState({});
@@ -127,6 +136,9 @@ function App() {
   const [bankLoading, setBankLoading] = useState(false);
   const [bankError, setBankError] = useState("");
   const [banksLoaded, setBanksLoaded] = useState(false);
+  const [interactiveLoanAmount, setInteractiveLoanAmount] = useState(400000);
+  const [interactiveTenure, setInteractiveTenure] = useState(36);
+  const [bankTypeFilter, setBankTypeFilter] = useState("All");
 
   // Apply Modal
   const [selectedBankForApply, setSelectedBankForApply] = useState(null);
@@ -379,12 +391,14 @@ function App() {
     }
   }
 
-  // Multi-Bank Comparison
-  async function handleCompareBanks() {
+  // Multi-Bank Comparison with interactive parameters
+  async function handleCompareBanks(overrideAmount, overrideTenure) {
     setBankLoading(true);
     setBankError("");
     try {
-      const res = await compareBanks();
+      const amt = overrideAmount !== undefined ? overrideAmount : interactiveLoanAmount;
+      const ten = overrideTenure !== undefined ? overrideTenure : interactiveTenure;
+      const res = await compareBanks(amt, ten);
       setBanks(res.eligible_banks || []);
       setBanksLoaded(true);
     } catch (err) {
@@ -413,12 +427,10 @@ function App() {
     setApplySuccess("");
 
     try {
-      // Find bank ID from matching banks or use index+1
-      let bankId = 1;
-      if (selectedBankForApply.bank_name === "SBI") bankId = 1;
-      else if (selectedBankForApply.bank_name === "HDFC Bank") bankId = 2;
-      else if (selectedBankForApply.bank_name === "ICICI Bank") bankId = 3;
-      else if (selectedBankForApply.bank_name === "Axis Bank") bankId = 4;
+      const bankId = selectedBankForApply.bank_id ||
+        (selectedBankForApply.bank_name === "SBI" ? 1 :
+         selectedBankForApply.bank_name === "HDFC Bank" ? 2 :
+         selectedBankForApply.bank_name === "ICICI Bank" ? 3 : 4);
 
       const appData = {
         bank_id: bankId,
@@ -1132,6 +1144,7 @@ function App() {
                             <div key={type} style={{ background: "#0c0f1a", border: "1px solid #1e2436", padding: "12px", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
                               <div>
                                 <strong style={{ fontSize: "12px", color: "#fff", display: "block" }}>{type}</strong>
+                                <span style={{ fontSize: "10px", color: "#808aa0", display: "block", marginBottom: "3px" }}>{docSubtitles[type]}</span>
                                 {uploaded ? (
                                   <span style={{ fontSize: "11px", color: uploaded.review_status === "Verified" ? "#4ade80" : uploaded.review_status === "Rejected" ? "#f87171" : "#fbbf24" }}>
                                     ● {uploaded.review_status}: {uploaded.file_name} ({Math.round(uploaded.file_size / 1024)} KB)
@@ -1203,9 +1216,69 @@ function App() {
 
                     {bankError && <div className="error-message">{bankError}</div>}
 
+                    {/* Interactive Rate & Loan Amount Controls */}
+                    <div className="calculator-card" style={{ marginBottom: "20px", padding: "16px 20px" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px", alignItems: "center" }}>
+                        <div className="slider-group" style={{ margin: 0 }}>
+                          <div className="slider-header">
+                            <span style={{ fontSize: "12px", color: "#c4b5fd" }}>Interactive Loan Amount:</span>
+                            <strong style={{ color: "#fff" }}>₹{Number(interactiveLoanAmount).toLocaleString("en-IN")}</strong>
+                          </div>
+                          <input
+                            type="range"
+                            min="50000"
+                            max="3000000"
+                            step="25000"
+                            value={interactiveLoanAmount}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              setInteractiveLoanAmount(val);
+                              handleCompareBanks(val, interactiveTenure);
+                            }}
+                          />
+                        </div>
+                        <div className="slider-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: "12px", color: "#c4b5fd", display: "block", marginBottom: "6px" }}>Repayment Tenure</label>
+                          <select
+                            value={interactiveTenure}
+                            onChange={(e) => {
+                              const val = Number(e.target.value);
+                              setInteractiveTenure(val);
+                              handleCompareBanks(interactiveLoanAmount, val);
+                            }}
+                            style={{ width: "100%", padding: "8px 12px", background: "#111420", border: "1px solid #7c3aed", borderRadius: "6px", color: "#fff" }}
+                          >
+                            <option value={12}>12 Months (1 Year)</option>
+                            <option value={24}>24 Months (2 Years)</option>
+                            <option value={36}>36 Months (3 Years)</option>
+                            <option value={48}>48 Months (4 Years)</option>
+                            <option value={60}>60 Months (5 Years)</option>
+                          </select>
+                        </div>
+                        <div className="slider-group" style={{ margin: 0 }}>
+                          <label style={{ fontSize: "12px", color: "#c4b5fd", display: "block", marginBottom: "6px" }}>Lender Category</label>
+                          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                            {["All", "Public Lender", "Private Lender"].map((cat) => (
+                              <button
+                                key={cat}
+                                type="button"
+                                className={`filter-pill ${bankTypeFilter === cat ? "active" : ""}`}
+                                style={{ fontSize: "11px", padding: "6px 10px" }}
+                                onClick={() => setBankTypeFilter(cat)}
+                              >
+                                {cat === "All" ? "All Lenders" : cat.replace(" Lender", "")}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     {banks.length > 0 ? (
                       <div className="bank-grid">
-                        {banks.map((bank, index) => (
+                        {banks
+                          .filter((b) => bankTypeFilter === "All" || b.bank_type === bankTypeFilter)
+                          .map((bank, index) => (
                           <div key={bank.bank_name} className={`bank-card ${index === 0 ? "bank-card-best" : ""}`}>
                             {index === 0 && <div className="best-match-badge">BEST MATCH</div>}
 
@@ -1239,8 +1312,14 @@ function App() {
                                   <strong>₹{Number(bank.min_loan_amount).toLocaleString("en-IN")} - ₹{Number(bank.max_loan_amount).toLocaleString("en-IN")}</strong>
                                 </div>
                                 <div className="bank-detail">
-                                  <span>Processing Window</span>
-                                  <strong>{bank.approval_time_display}</strong>
+                                  <span>Approval Window</span>
+                                  <strong style={{ color: "#4ade80" }}>⏱ {bank.approval_time_display}</strong>
+                                </div>
+                                <div className="bank-detail" style={{ gridColumn: "span 2", background: "rgba(124, 58, 237, 0.1)", border: "1px solid rgba(124, 58, 237, 0.3)", borderRadius: "6px", padding: "8px 12px" }}>
+                                  <span style={{ color: "#c4b5fd" }}>Estimated Monthly EMI:</span>
+                                  <strong style={{ color: "#4ade80", fontSize: "15px" }}>
+                                    ₹{Number(bank.estimated_monthly_emi || 0).toLocaleString("en-IN")} / mo
+                                  </strong>
                                 </div>
                               </div>
 

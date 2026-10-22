@@ -180,8 +180,9 @@ export function getDocumentDownloadUrl(documentId) {
 // BANK COMPARISON & RECOMMENDATIONS
 // ======================================================
 
-export async function compareBanks() {
-  return request("/banks/compare", { method: "GET" });
+export async function compareBanks(amount, tenure) {
+  const query = amount ? `?amount=${amount}&tenure=${tenure || 36}` : "";
+  return request(`/banks/compare${query}`, { method: "GET" });
 }
 
 // ======================================================
