@@ -1,0 +1,11 @@
+bank_name,short_name,bank_type,product_name,interest_rate_min,interest_rate_max,min_loan_amount,max_loan_amount,min_cibil_score,min_annual_income,processing_fee_pct,max_tenure_months,approval_turnaround,prepayment_penalty,official_url
+State Bank of India,SBI,Public Lender,SBI Xpress Credit Personal Loan,10.5,14.5,25000,2000000,650,200000,1.0,72,3 to 7 working days,Nil after 12 months,https://sbi.co.in
+HDFC Bank,HDFC,Private Lender,HDFC Quick Cash Personal Loan,10.75,16.0,50000,4000000,680,300000,1.25,60,Instant to 48 hours,2% to 4%,https://www.hdfcbank.com
+ICICI Bank,ICICI,Private Lender,ICICI Dream Loan Solution,10.85,16.5,50000,5000000,700,250000,1.5,72,24 to 72 hours,3% + GST,https://www.icicibank.com
+Axis Bank,Axis,Private Lender,Axis Bank 24x7 Personal Loan,10.99,16.75,50000,4000000,670,240000,1.5,60,2 to 4 working days,2%,https://www.axisbank.com
+Bank of Baroda,BoB,Public Lender,Baroda Advantage Personal Loan,10.35,14.8,50000,2000000,650,200000,1.0,60,2 to 4 working days,Nil,https://www.bankofbaroda.in
+Kotak Mahindra Bank,Kotak,Private Lender,Kotak Instant Personal Loan,10.99,17.5,50000,4000000,680,300000,1.5,60,Instant to 24 hours,3%,https://www.kotak.com
+Punjab National Bank,PNB,Public Lender,PNB Sahyog Personal Loan,10.4,15.25,25000,2000000,660,180000,1.0,72,3 to 5 working days,Nil,https://www.pnbindia.in
+Canara Bank,Canara,Public Lender,Canara Budget Personal Loan,10.65,15.1,25000,1500000,650,180000,0.75,60,3 to 5 working days,Nil,https://canarabank.com
+IndusInd Bank,IndusInd,Private Lender,IndusInd Multi-Purpose Personal Loan,10.49,17.0,50000,3000000,675,300000,1.5,60,24 to 48 hours,2.5%,https://www.indusind.com
+IDFC FIRST Bank,IDFC,Private Lender,IDFC FIRST Easy Personal Loan,10.49,18.0,50000,5000000,680,240000,1.75,60,4 to 24 hours,Nil after 3 EMIs,https://www.idfcfirstbank.com

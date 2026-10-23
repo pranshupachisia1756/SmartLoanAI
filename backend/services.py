@@ -123,8 +123,9 @@ def match_banks_for_applicant(
     requested_tenure: Optional[int] = None
 ) -> List[Dict[str, Any]]:
     """
-    Evaluates applicant against institutional criteria for SBI, HDFC, ICICI, and Axis Bank.
-    Computes dynamic match scores, verified rates, approval turnaround times, and recommendations.
+    Evaluates applicant against institutional criteria across leading public and private Indian lenders:
+    SBI, HDFC Bank, ICICI Bank, Axis Bank, Bank of Baroda, Kotak Mahindra Bank, PNB, Canara Bank, IndusInd Bank, and IDFC FIRST Bank.
+    Computes dynamic match scores, verified rates, maximum offered sanction amounts, turnaround times, and recommendations.
     """
     amount = float(requested_amount or applicant.loan_amount)
     tenure = int(requested_tenure or applicant.loan_term_months)
@@ -190,7 +191,15 @@ def match_banks_for_applicant(
 
         why_recommended.append(f"Official Processing Window: {prod.approval_time_display}.")
 
-        # Estimated monthly EMI
+        # Compute applicant-specific maximum sanctioned loan offer
+        monthly_inc = float(applicant.monthly_income or (applicant.annual_income / 12.0))
+        cibil_factor = 1.05 if cibil >= 780 else (1.0 if cibil >= 740 else (0.85 if cibil >= 700 else 0.70))
+        dti_factor = max(0.40, min(1.0, 1.0 - (dti * 0.8)))
+        bank_multiplier = 24.0 if bank.type == "Private Lender" else 20.0
+        calculated_sanction = monthly_inc * bank_multiplier * cibil_factor * dti_factor
+        max_sanction_offered = min(prod.max_loan_amount, max(prod.min_loan_amount, round(calculated_sanction / 10000.0) * 10000.0))
+
+        # Estimated monthly EMI on requested amount
         est_emi = calculate_emi(amount, prod.interest_rate_min, tenure)
 
         offer = {
@@ -208,6 +217,8 @@ def match_banks_for_applicant(
             "processing_fee_display": f"{prod.processing_fee_percent:.2f}% of loan amount",
             "min_loan_amount": prod.min_loan_amount,
             "max_loan_amount": prod.max_loan_amount,
+            "max_sanction_offered": max_sanction_offered,
+            "max_sanction_offered_display": f"₹{int(max_sanction_offered):,}",
             "approval_time_display": prod.approval_time_display or bank.approval_time_display or "2 to 4 working days",
             "estimated_monthly_emi": est_emi,
             "why_recommended": why_recommended,

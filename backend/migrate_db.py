@@ -122,6 +122,156 @@ def migrate_and_seed():
                         "approval_time_display": "2 to 4 working days"
                     }
                 ]
+            },
+            {
+                "name": "Bank of Baroda",
+                "display_name": "Bank of Baroda",
+                "type": "Public Lender",
+                "official_url": "https://www.bankofbaroda.in",
+                "approval_time_display": "2 to 4 working days",
+                "products": [
+                    {
+                        "name": "Baroda Advantage Personal Loan",
+                        "loan_type": "Personal Loan",
+                        "min_cibil": 650,
+                        "min_income": 200000.0,
+                        "min_loan_amount": 50000.0,
+                        "max_loan_amount": 2000000.0,
+                        "interest_rate_min": 10.35,
+                        "interest_rate_max": 14.80,
+                        "processing_fee_percent": 1.0,
+                        "min_age": 21,
+                        "max_age": 60,
+                        "supported_employment": "Salaried,Self Employed,Business Owner",
+                        "supported_purposes": "Personal,Home,Education,Medical,Vehicle,Business",
+                        "approval_time_display": "2 to 4 working days"
+                    }
+                ]
+            },
+            {
+                "name": "Kotak Mahindra Bank",
+                "display_name": "Kotak Mahindra Bank",
+                "type": "Private Lender",
+                "official_url": "https://www.kotak.com",
+                "approval_time_display": "Instant to 24 hours",
+                "products": [
+                    {
+                        "name": "Kotak Instant Personal Loan",
+                        "loan_type": "Personal Loan",
+                        "min_cibil": 680,
+                        "min_income": 300000.0,
+                        "min_loan_amount": 50000.0,
+                        "max_loan_amount": 4000000.0,
+                        "interest_rate_min": 10.99,
+                        "interest_rate_max": 17.50,
+                        "processing_fee_percent": 1.5,
+                        "min_age": 21,
+                        "max_age": 58,
+                        "supported_employment": "Salaried,Self Employed,Business Owner",
+                        "supported_purposes": "Personal,Home,Education,Medical,Vehicle,Business",
+                        "approval_time_display": "Instant to 24 hours"
+                    }
+                ]
+            },
+            {
+                "name": "PNB",
+                "display_name": "Punjab National Bank",
+                "type": "Public Lender",
+                "official_url": "https://www.pnbindia.in",
+                "approval_time_display": "3 to 5 working days",
+                "products": [
+                    {
+                        "name": "PNB Sahyog Personal Loan",
+                        "loan_type": "Personal Loan",
+                        "min_cibil": 660,
+                        "min_income": 180000.0,
+                        "min_loan_amount": 25000.0,
+                        "max_loan_amount": 2000000.0,
+                        "interest_rate_min": 10.40,
+                        "interest_rate_max": 15.25,
+                        "processing_fee_percent": 1.0,
+                        "min_age": 21,
+                        "max_age": 60,
+                        "supported_employment": "Salaried,Self Employed,Business Owner",
+                        "supported_purposes": "Personal,Home,Education,Medical,Vehicle,Business",
+                        "approval_time_display": "3 to 5 working days"
+                    }
+                ]
+            },
+            {
+                "name": "Canara Bank",
+                "display_name": "Canara Bank",
+                "type": "Public Lender",
+                "official_url": "https://canarabank.com",
+                "approval_time_display": "3 to 5 working days",
+                "products": [
+                    {
+                        "name": "Canara Budget Personal Loan",
+                        "loan_type": "Personal Loan",
+                        "min_cibil": 650,
+                        "min_income": 180000.0,
+                        "min_loan_amount": 25000.0,
+                        "max_loan_amount": 1500000.0,
+                        "interest_rate_min": 10.65,
+                        "interest_rate_max": 15.10,
+                        "processing_fee_percent": 0.75,
+                        "min_age": 21,
+                        "max_age": 60,
+                        "supported_employment": "Salaried,Self Employed,Business Owner",
+                        "supported_purposes": "Personal,Home,Education,Medical,Vehicle,Business",
+                        "approval_time_display": "3 to 5 working days"
+                    }
+                ]
+            },
+            {
+                "name": "IndusInd Bank",
+                "display_name": "IndusInd Bank",
+                "type": "Private Lender",
+                "official_url": "https://www.indusind.com",
+                "approval_time_display": "24 to 48 hours",
+                "products": [
+                    {
+                        "name": "IndusInd Multi-Purpose Personal Loan",
+                        "loan_type": "Personal Loan",
+                        "min_cibil": 675,
+                        "min_income": 300000.0,
+                        "min_loan_amount": 50000.0,
+                        "max_loan_amount": 3000000.0,
+                        "interest_rate_min": 10.49,
+                        "interest_rate_max": 17.00,
+                        "processing_fee_percent": 1.5,
+                        "min_age": 21,
+                        "max_age": 60,
+                        "supported_employment": "Salaried,Self Employed,Business Owner",
+                        "supported_purposes": "Personal,Home,Education,Medical,Vehicle,Business",
+                        "approval_time_display": "24 to 48 hours"
+                    }
+                ]
+            },
+            {
+                "name": "IDFC FIRST Bank",
+                "display_name": "IDFC FIRST Bank",
+                "type": "Private Lender",
+                "official_url": "https://www.idfcfirstbank.com",
+                "approval_time_display": "4 to 24 hours",
+                "products": [
+                    {
+                        "name": "IDFC FIRST Easy Personal Loan",
+                        "loan_type": "Personal Loan",
+                        "min_cibil": 680,
+                        "min_income": 240000.0,
+                        "min_loan_amount": 50000.0,
+                        "max_loan_amount": 5000000.0,
+                        "interest_rate_min": 10.49,
+                        "interest_rate_max": 18.00,
+                        "processing_fee_percent": 1.75,
+                        "min_age": 21,
+                        "max_age": 60,
+                        "supported_employment": "Salaried,Self Employed,Business Owner",
+                        "supported_purposes": "Personal,Home,Education,Medical,Vehicle,Business",
+                        "approval_time_display": "4 to 24 hours"
+                    }
+                ]
             }
         ]
 
@@ -140,6 +290,12 @@ def migrate_and_seed():
                 db.commit()
                 db.refresh(new_bank)
                 existing_bank = new_bank
+            else:
+                existing_bank.display_name = b_data["display_name"]
+                existing_bank.type = b_data["type"]
+                existing_bank.official_url = b_data["official_url"]
+                existing_bank.approval_time_display = b_data["approval_time_display"]
+                db.commit()
 
             # Seed loan products
             for p_data in b_data["products"]:

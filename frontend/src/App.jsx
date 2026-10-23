@@ -1207,7 +1207,7 @@ function App() {
                       <div>
                         <span>Multi-Lender Match Engine</span>
                         <h2>Compare Leading Indian Bank Loan Schemes</h2>
-                        <p>Real-time eligibility matching across verified lender rules for SBI, HDFC Bank, ICICI Bank, and Axis Bank.</p>
+                        <p>Real-time eligibility matching and sanctioned loan offers across 10 leading Indian lenders (SBI, HDFC Bank, ICICI Bank, Axis Bank, Bank of Baroda, Kotak Mahindra Bank, PNB, Canara Bank, IndusInd Bank, and IDFC FIRST Bank).</p>
                       </div>
                       <button className="primary-button" onClick={handleCompareBanks} disabled={bankLoading}>
                         {bankLoading ? "Scanning Products..." : "🔄 Refresh Comparisons"}
@@ -1315,11 +1315,19 @@ function App() {
                                   <span>Approval Window</span>
                                   <strong style={{ color: "#4ade80" }}>⏱ {bank.approval_time_display}</strong>
                                 </div>
-                                <div className="bank-detail" style={{ gridColumn: "span 2", background: "rgba(124, 58, 237, 0.1)", border: "1px solid rgba(124, 58, 237, 0.3)", borderRadius: "6px", padding: "8px 12px" }}>
-                                  <span style={{ color: "#c4b5fd" }}>Estimated Monthly EMI:</span>
-                                  <strong style={{ color: "#4ade80", fontSize: "15px" }}>
-                                    ₹{Number(bank.estimated_monthly_emi || 0).toLocaleString("en-IN")} / mo
-                                  </strong>
+                                <div className="bank-detail" style={{ gridColumn: "span 2", background: "rgba(16, 185, 129, 0.12)", border: "1px solid rgba(16, 185, 129, 0.35)", borderRadius: "6px", padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                  <div>
+                                    <span style={{ color: "#a7f3d0", fontSize: "11px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px", display: "block" }}>Max Loan Sanction Offered:</span>
+                                    <strong style={{ color: "#34d399", fontSize: "18px", fontWeight: "700" }}>
+                                      {bank.max_sanction_offered_display || `₹${Number(bank.max_sanction_offered || bank.max_loan_amount).toLocaleString("en-IN")}`}
+                                    </strong>
+                                  </div>
+                                  <div style={{ textAlign: "right" }}>
+                                    <span style={{ color: "#c4b5fd", fontSize: "11px", display: "block" }}>Est. Monthly EMI:</span>
+                                    <strong style={{ color: "#fff", fontSize: "15px" }}>
+                                      ₹{Number(bank.estimated_monthly_emi || 0).toLocaleString("en-IN")} / mo
+                                    </strong>
+                                  </div>
                                 </div>
                               </div>
 

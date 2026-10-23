@@ -122,9 +122,9 @@ flowchart TD
 - **Credit Improvement Advisory**: Dynamic generation of tailored recommendations (for example, reducing existing credit utilization or adjusting tenure) to help applicants improve approval odds.
 
 ### Multi-Lender Match Engine
-- **Pre-Integrated Lenders**: Compares offers across major institutions including State Bank of India (SBI), HDFC Bank, ICICI Bank, and Axis Bank.
+- **Pre-Integrated Lenders**: Compares offers across 10 leading Indian financial institutions: State Bank of India (SBI), Bank of Baroda (BoB), Punjab National Bank (PNB), Canara Bank, HDFC Bank, ICICI Bank, Axis Bank, Kotak Mahindra Bank, IndusInd Bank, and IDFC FIRST Bank.
 - **Eligibility Scoring**: Evaluates borrower profile against institution-specific policies, tenure ranges, minimum income thresholds, and risk appetites.
-- **Transparent Terms**: Side-by-side display of annual percentage rates (APR), processing fees, maximum loan limits, and personalized match percentages.
+- **Transparent Terms**: Side-by-side display of annual percentage rates (APR), processing fees, maximum sanctioned loan offers, and personalized match percentages.
 
 ### Financial Tools and Calculators
 - **Reducing-Balance EMI Calculator**: Computes principal, interest, and monthly installments across custom tenures with division-by-zero protection for 0% promotional schemes.
@@ -159,7 +159,10 @@ SmartLoanAI/
 ├── README.md                 # Primary system documentation
 ├── dataset/
 │   ├── generate_dataset.py   # Synthetic loan dataset generator script
-│   └── loan_data.csv         # 5,000-record benchmark loan dataset
+│   ├── loan_data.csv         # 5,000-record benchmark loan dataset
+│   ├── generate_bank_dataset.py # Multi-bank loan offers generator script
+│   ├── bank_loan_schemes.csv    # 10-Bank institutional criteria & policy dataset
+│   └── multi_bank_loan_offers.csv # 5,000-record multi-lender offer evaluations
 ├── frontend/
 │   ├── index.html            # Single-page application entry point
 │   ├── package.json          # Frontend dependencies and scripts
