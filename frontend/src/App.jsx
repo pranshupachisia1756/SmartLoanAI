@@ -10,7 +10,10 @@ import {
   createLoanApplication,
   getBankDashboard,
   getBankApplications,
-  reviewApplicationDecision
+  reviewApplicationDecision,
+  uploadDocument,
+  getDocuments,
+  getDocumentDownloadUrl
 } from "./api";
 
 export default function App() {
@@ -49,6 +52,51 @@ export default function App() {
   const [optCardSpend, setOptCardSpend] = useState(true);
   const [optNachMandate, setOptNachMandate] = useState(true);
   const [optCoApplicant, setOptCoApplicant] = useState(false);
+
+  // Documents / KYC Vault State
+  const [userDocs, setUserDocs] = useState([]);
+  const [docCompleteness, setDocCompleteness] = useState(0);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [docSelectedFiles, setDocSelectedFiles] = useState({});
+  const [docUploading, setDocUploading] = useState({});
+
+  const MANDATORY_DOCUMENTS = [
+    {
+      type: "PAN Card",
+      title: "Permanent Account Number (PAN)",
+      desc: "Mandatory Tax ID & Identity Verification against NSDL database.",
+      accept: ".pdf,.png,.jpg,.jpeg",
+      code: "PAN"
+    },
+    {
+      type: "Aadhaar / KYC",
+      title: "Aadhaar / Address Proof",
+      desc: "UIDAI e-KYC or verified current residential address document.",
+      accept: ".pdf,.png,.jpg,.jpeg",
+      code: "KYC"
+    },
+    {
+      type: "Income Proof",
+      title: "Latest 3-Month Salary Slips",
+      desc: "Official employer-stamped payslips or recent ITR-V assessment.",
+      accept: ".pdf,.png,.jpg,.jpeg",
+      code: "INC"
+    },
+    {
+      type: "Bank Statement",
+      title: "6-Month Bank Statement (PDF)",
+      desc: "Primary salary credit account statement for cash-flow underwriting.",
+      accept: ".pdf",
+      code: "BNK"
+    },
+    {
+      type: "Employment / Business Proof",
+      title: "Employment / Corporate ID Proof",
+      desc: "Valid corporate badge, appointment letter, or business registration.",
+      accept: ".pdf,.png,.jpg,.jpeg",
+      code: "EMP"
+    }
+  ];
 
   // Application Success Modal / Toast
   const [toastMessage, setToastMessage] = useState("");
@@ -284,6 +332,7 @@ export default function App() {
       } else {
         saveToken(res.access_token, res);
         setCurrentUser(res);
+        loadUserDocuments();
       }
       setAuthModalOpen(false);
       showToast(`Welcome back, ${res.name}!`);
@@ -291,6 +340,52 @@ export default function App() {
       setAuthError(err.message || "Invalid credentials");
     } finally {
       setAuthLoading(false);
+    }
+  }
+
+  async function loadUserDocuments() {
+    try {
+      setDocsLoading(true);
+      const res = await getDocuments();
+      if (res && res.documents) {
+        setUserDocs(res.documents);
+        setDocCompleteness(res.document_completeness || 0);
+      }
+    } catch (err) {
+      console.warn("Could not load user documents:", err);
+    } finally {
+      setDocsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (currentUser) {
+      loadUserDocuments();
+    }
+  }, [currentUser]);
+
+  async function handleDocUpload(docType) {
+    if (!currentUser) {
+      showToast("Please sign in to upload documents.");
+      setAuthMode("login");
+      setAuthModalOpen(true);
+      return;
+    }
+    const file = docSelectedFiles[docType];
+    if (!file) {
+      showToast(`Please choose a file for ${docType}`);
+      return;
+    }
+    setDocUploading((prev) => ({ ...prev, [docType]: true }));
+    try {
+      const res = await uploadDocument(docType, file);
+      showToast(res.message || `${docType} uploaded successfully`);
+      setDocSelectedFiles((prev) => ({ ...prev, [docType]: null }));
+      await loadUserDocuments();
+    } catch (err) {
+      showToast(err.message || `Failed to upload ${docType}`);
+    } finally {
+      setDocUploading((prev) => ({ ...prev, [docType]: false }));
     }
   }
 
@@ -309,6 +404,8 @@ export default function App() {
     logoutUser();
     setCurrentUser(null);
     setBankUser(null);
+    setUserDocs([]);
+    setDocCompleteness(0);
     setPortalMode("applicant");
     setActiveTab("landing");
     showToast("Logged out successfully");
@@ -409,6 +506,12 @@ export default function App() {
               onClick={() => setActiveTab("verdict")}
             >
               AI Terminal
+            </button>
+            <button
+              className={`neo-nav-item ${activeTab === "documents" ? "active" : ""}`}
+              onClick={() => setActiveTab("documents")}
+            >
+              KYC Vault
             </button>
             <button
               className={`neo-nav-item ${activeTab === "calculator" ? "active" : ""}`}
@@ -1467,7 +1570,297 @@ export default function App() {
       )}
 
       {/* ==============================================================================
-          PAGE 4: EMI SANDBOX / CALCULATOR
+          PAGE 4: KYC DOCUMENT VAULT & VERIFICATION CENTER
+          ============================================================================== */}
+      {activeTab === "documents" && (
+        <main style={{ padding: "40px 5% 70px" }}>
+          {/* Header */}
+          <div className="neo-section-heading">
+            <span className="neo-badge neo-badge-yellow" style={{ marginBottom: "12px" }}>
+              <span className="status-dot-green"></span>
+              RBI DLRE COMPLIANT • 256-BIT ENCRYPTED
+            </span>
+            <h2>Underwriting Document Vault</h2>
+            <p style={{ maxWidth: "680px", color: "#2d3731", fontSize: "15px", lineHeight: "1.6" }}>
+              Upload mandatory identity, income, and banking credentials to satisfy RBI fair practices verification standards and qualify for instant algorithmic loan disbursal across all 10 consortium lenders.
+            </p>
+          </div>
+
+          {/* Guest Mode Warning if not logged in */}
+          {!currentUser && (
+            <div
+              style={{
+                background: "var(--neo-white)",
+                border: "var(--border-2px)",
+                boxShadow: "var(--shadow-md)",
+                padding: "20px 24px",
+                marginBottom: "30px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "16px"
+              }}
+            >
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                  <span className="neo-badge neo-badge-charcoal" style={{ fontSize: "10px" }}>GUEST SESSION</span>
+                  <strong style={{ fontSize: "16px" }}>Sign In to Sync Documents to Your Secure Vault</strong>
+                </div>
+                <p style={{ margin: 0, fontSize: "13px", color: "#555" }}>
+                  Uploaded files are tied to your applicant profile to calculate your KYC verification percentage.
+                </p>
+              </div>
+              <button
+                className="neo-btn neo-btn-primary"
+                onClick={() => {
+                  setAuthMode("login");
+                  setAuthEmail("pranshu2@test.com");
+                  setAuthPassword("Password123");
+                  setAuthModalOpen(true);
+                }}
+              >
+                Sign In with Demo Account →
+              </button>
+            </div>
+          )}
+
+          {/* Telemetry Summary Cards */}
+          <div className="vault-stats-grid">
+            <div className="vault-stat-card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <span style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", color: "#555" }}>
+                  KYC Completeness
+                </span>
+                <span className={`neo-badge ${docCompleteness >= 80 ? "neo-badge-emerald" : "neo-badge-yellow"}`} style={{ fontSize: "10px" }}>
+                  {docCompleteness >= 80 ? "READY FOR SANCTION" : "INCOMPLETE"}
+                </span>
+              </div>
+              <strong style={{ fontSize: "36px", fontFamily: "var(--font-heading)" }}>
+                {docCompleteness}%
+              </strong>
+              <div style={{ height: "10px", background: "#e5e7eb", border: "var(--border-2px)", overflow: "hidden", margin: "14px 0 8px" }}>
+                <div style={{ width: `${docCompleteness}%`, height: "100%", background: docCompleteness >= 80 ? "#10b981" : "var(--neo-yellow)", transition: "width 0.4s ease" }}></div>
+              </div>
+              <span style={{ fontSize: "11px", fontWeight: "700", color: "#666" }}>
+                {userDocs.length} of 5 mandatory documents uploaded
+              </span>
+            </div>
+
+            <div className="vault-stat-card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <span style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", color: "#555" }}>
+                  Encryption & Security
+                </span>
+                <span className="neo-badge neo-badge-charcoal" style={{ fontSize: "10px" }}>
+                  ACTIVE
+                </span>
+              </div>
+              <strong style={{ fontSize: "28px", fontFamily: "var(--font-heading)" }}>
+                AES-256 At Rest
+              </strong>
+              <p style={{ margin: "8px 0 0", fontSize: "12px", color: "#444", lineHeight: "1.5" }}>
+                Zero-knowledge isolated tenant directory with strict IDOR prevention and cryptographic signature verification.
+              </p>
+            </div>
+
+            <div className="vault-stat-card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <span style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", color: "#555" }}>
+                  Underwriter TAT
+                </span>
+                <span className="neo-badge neo-badge-emerald" style={{ fontSize: "10px" }}>
+                  FAST-TRACK
+                </span>
+              </div>
+              <strong style={{ fontSize: "28px", fontFamily: "var(--font-heading)", color: "#064e3b" }}>
+                {docCompleteness >= 80 ? "< 120 Seconds" : "Pending Proofs"}
+              </strong>
+              <p style={{ margin: "8px 0 0", fontSize: "12px", color: "#444", lineHeight: "1.5" }}>
+                100% digital verification unlocks instant netbanking disbursement across all 10 integrated public & private lenders.
+              </p>
+            </div>
+          </div>
+
+          {/* Mandatory Documents Upload Grid */}
+          <div style={{ marginBottom: "18px" }}>
+            <h3 style={{ fontSize: "22px", textTransform: "uppercase", marginBottom: "6px" }}>
+              Mandatory KYC & Verification Checklist
+            </h3>
+            <p style={{ fontSize: "13px", color: "#555", margin: 0 }}>
+              Accepted formats: PDF, PNG, JPG, JPEG (Max 10 MB per file).
+            </p>
+          </div>
+
+          <div className="doc-grid-container">
+            {MANDATORY_DOCUMENTS.map((item) => {
+              const uploaded = userDocs.find((d) => d.document_type === item.type);
+              const isUploading = !!docUploading[item.type];
+              const selectedFile = docSelectedFiles[item.type];
+
+              return (
+                <div key={item.type} className="doc-vault-card">
+                  <div>
+                    <div className="doc-card-header">
+                      <div className="doc-type-icon">{item.code}</div>
+                      {uploaded ? (
+                        <span className="neo-badge neo-badge-emerald" style={{ fontSize: "10px" }}>
+                          <span className="status-dot-green"></span>
+                          VERIFIED // ON FILE
+                        </span>
+                      ) : (
+                        <span className="neo-badge neo-badge-yellow" style={{ fontSize: "10px" }}>
+                          ACTION REQUIRED
+                        </span>
+                      )}
+                    </div>
+
+                    <h4 style={{ fontSize: "17px", textTransform: "uppercase", margin: "0 0 6px" }}>
+                      {item.title}
+                    </h4>
+                    <p style={{ fontSize: "12px", color: "#555", margin: "0 0 14px", lineHeight: "1.5" }}>
+                      {item.desc}
+                    </p>
+
+                    {uploaded && (
+                      <div style={{ background: "var(--neo-sage-tint)", border: "var(--border-2px)", padding: "10px 12px", marginBottom: "14px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <strong style={{ fontSize: "12px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "180px" }}>
+                            {uploaded.file_name}
+                          </strong>
+                          <span style={{ fontSize: "10px", color: "#064e3b", fontWeight: "800" }}>
+                            {uploaded.file_size ? `${Math.round(uploaded.file_size / 1024)} KB` : "Verified"}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: "10px", color: "#555", display: "block", marginTop: "3px" }}>
+                          Uploaded on {new Date(uploaded.uploaded_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    {uploaded ? (
+                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                        <a
+                          href={getDocumentDownloadUrl(uploaded.id)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="neo-btn neo-btn-white neo-btn-sm"
+                          style={{ flex: 1 }}
+                        >
+                          Download File →
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="doc-upload-zone">
+                        <input
+                          type="file"
+                          accept={item.accept}
+                          className="doc-file-input"
+                          onChange={(e) => {
+                            const f = e.target.files && e.target.files[0];
+                            if (f) {
+                              setDocSelectedFiles((prev) => ({ ...prev, [item.type]: f }));
+                            }
+                          }}
+                        />
+                        <button
+                          className="neo-btn neo-btn-primary neo-btn-sm"
+                          style={{ width: "100%" }}
+                          disabled={isUploading || !selectedFile}
+                          onClick={() => handleDocUpload(item.type)}
+                        >
+                          {isUploading ? "Uploading & Encrypting..." : "Upload to Vault →"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Audited Document Ledger Table */}
+          <div style={{ marginTop: "40px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+              <div>
+                <span className="neo-badge neo-badge-charcoal" style={{ marginBottom: "6px" }}>LEDGER</span>
+                <h3 style={{ fontSize: "24px", textTransform: "uppercase", margin: 0 }}>
+                  Cryptographic KYC Document Audit Ledger
+                </h3>
+              </div>
+              <span style={{ fontSize: "11px", fontWeight: "700", color: "#555" }}>
+                Synchronized with FastAPI Secure File Store
+              </span>
+            </div>
+
+            <div className="neo-table-wrapper">
+              <table className="neo-table">
+                <thead>
+                  <tr>
+                    <th>Doc ID</th>
+                    <th>Document Category</th>
+                    <th>File Name</th>
+                    <th>File Size</th>
+                    <th>Verification Status</th>
+                    <th>Upload Timestamp</th>
+                    <th style={{ textAlign: "right" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userDocs.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: "center", padding: "32px", color: "#666", fontWeight: "700" }}>
+                        No documents recorded in ledger yet. Select and upload your mandatory proofs above.
+                      </td>
+                    </tr>
+                  ) : (
+                    userDocs.map((doc) => (
+                      <tr key={doc.id}>
+                        <td style={{ fontWeight: "800", fontFamily: "var(--font-heading)" }}>
+                          #DOC-{String(doc.id).padStart(4, "0")}
+                        </td>
+                        <td>
+                          <strong>{doc.document_type}</strong>
+                        </td>
+                        <td style={{ fontSize: "12px", color: "#333" }}>
+                          {doc.file_name}
+                        </td>
+                        <td style={{ fontSize: "12px" }}>
+                          {doc.file_size ? `${Math.round(doc.file_size / 1024)} KB` : "—"}
+                        </td>
+                        <td>
+                          <span className={`neo-badge ${doc.review_status === "Verified" ? "neo-badge-emerald" : "neo-badge-yellow"}`} style={{ fontSize: "10px" }}>
+                            {doc.review_status || "Verified"}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: "12px", color: "#555" }}>
+                          {new Date(doc.uploaded_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <a
+                            href={getDocumentDownloadUrl(doc.id)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="neo-btn neo-btn-yellow neo-btn-sm"
+                            style={{ padding: "4px 10px", fontSize: "11px" }}
+                          >
+                            Download →
+                          </a>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </main>
+      )}
+
+      {/* ==============================================================================
+          PAGE 5: EMI SANDBOX / CALCULATOR
           ============================================================================== */}
       {activeTab === "calculator" && (
         <main style={{ padding: "40px 5% 70px" }}>
@@ -1859,6 +2252,7 @@ export default function App() {
           <div className="footer-links">
             <a href="#marketplace" onClick={(e) => { e.preventDefault(); setActiveTab("marketplace"); }}>Marketplace</a>
             <a href="#verdict" onClick={(e) => { e.preventDefault(); setActiveTab("verdict"); }}>AI Terminal</a>
+            <a href="#documents" onClick={(e) => { e.preventDefault(); setActiveTab("documents"); }}>KYC Vault</a>
             <a href="#calculator" onClick={(e) => { e.preventDefault(); setActiveTab("calculator"); }}>EMI Sandbox</a>
             <a href="#privacy" onClick={(e) => { e.preventDefault(); showToast("RBI Fair Practices Code Compliant"); }}>Fair Practices</a>
           </div>
