@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import "./App.css";
 import {
   loginUser,
+  sendLoginOtp,
+  verifyLoginOtp,
   saveToken,
   getUser,
   logoutUser,
@@ -13,7 +15,8 @@ import {
   reviewApplicationDecision,
   uploadDocument,
   getDocuments,
-  getDocumentDownloadUrl
+  getDocumentDownloadUrl,
+  getSanctionLetterDownloadUrl
 } from "./api";
 
 export default function App() {
@@ -33,10 +36,21 @@ export default function App() {
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login"); // "login" or "officer"
+  const [authStep, setAuthStep] = useState("credentials"); // "credentials" or "otp"
   const [authEmail, setAuthEmail] = useState("pranshu2@test.com");
   const [authPassword, setAuthPassword] = useState("Password123");
+  const [authOtp, setAuthOtp] = useState("");
+  const [demoOtpCode, setDemoOtpCode] = useState("");
+  const [otpCountdown, setOtpCountdown] = useState(0);
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
+
+  useEffect(() => {
+    if (otpCountdown > 0) {
+      const timer = setTimeout(() => setOtpCountdown((prev) => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpCountdown]);
 
   // Controller / Simulator State (Hero & Controller Widget)
   const [requiredCapital, setRequiredCapital] = useState(1310000);
@@ -316,13 +330,61 @@ export default function App() {
     ];
   }
 
-  // Handle Authentication
-  async function handleLoginSubmit(e) {
-    e.preventDefault();
+  // Provisional Sanction Letter PDF Download
+  function handleDownloadSanctionLetter() {
+    showToast("Generating official provisional sanction letter PDF...");
+    const matchedBank = banks && banks.length > 0 ? banks[0] : null;
+    const params = {
+      amount: requiredCapital || 4500000,
+      rate: projectedRate || 10.25,
+      tenure: loanHorizon || 60,
+      bank_name: matchedBank?.bank_name || "HDFC Bank (Consortium Spotlight)",
+      applicant_name: currentUser ? (currentUser.name || currentUser.email) : "Pranshu Pachisia",
+      cibil_score: 750,
+      confidence: 98.04
+    };
+    const downloadUrl = getSanctionLetterDownloadUrl(params);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.setAttribute("download", "SmartLoan_Provisional_Sanction_Letter.pdf");
+    link.target = "_blank";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // Handle Authentication - Step 1: Send OTP
+  async function handleSendOtp(e) {
+    if (e) e.preventDefault();
     setAuthLoading(true);
     setAuthError("");
     try {
-      const res = await loginUser(authEmail, authPassword);
+      const res = await sendLoginOtp(authEmail, authPassword);
+      if (res && res.demo_otp) {
+        setDemoOtpCode(res.demo_otp);
+        setAuthOtp(res.demo_otp);
+      }
+      setAuthStep("otp");
+      setOtpCountdown(30);
+      showToast("OTP code generated! Enter the 6-digit passcode.");
+    } catch (err) {
+      setAuthError(err.message || "Invalid credentials. Please verify your email & password.");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  // Handle Authentication - Step 2: Verify OTP
+  async function handleVerifyOtp(e) {
+    if (e) e.preventDefault();
+    if (!authOtp || authOtp.trim().length !== 6) {
+      setAuthError("Please enter the complete 6-digit OTP code.");
+      return;
+    }
+    setAuthLoading(true);
+    setAuthError("");
+    try {
+      const res = await verifyLoginOtp(authEmail, authOtp.trim());
       if (res.bank_role) {
         saveBankToken(res.access_token, res);
         setBankUser(res);
@@ -335,9 +397,32 @@ export default function App() {
         loadUserDocuments();
       }
       setAuthModalOpen(false);
-      showToast(`Welcome back, ${res.name}!`);
+      setAuthStep("credentials");
+      setAuthOtp("");
+      setDemoOtpCode("");
+      showToast(`2FA Verified! Welcome back, ${res.name}!`);
     } catch (err) {
-      setAuthError(err.message || "Invalid credentials");
+      setAuthError(err.message || "Invalid or expired OTP code.");
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  // Handle Resend OTP
+  async function handleResendOtp() {
+    if (otpCountdown > 0) return;
+    setAuthLoading(true);
+    setAuthError("");
+    try {
+      const res = await sendLoginOtp(authEmail, authPassword);
+      if (res && res.demo_otp) {
+        setDemoOtpCode(res.demo_otp);
+        setAuthOtp(res.demo_otp);
+      }
+      setOtpCountdown(30);
+      showToast("Fresh OTP code dispatched.");
+    } catch (err) {
+      setAuthError(err.message || "Failed to resend OTP.");
     } finally {
       setAuthLoading(false);
     }
@@ -419,6 +504,11 @@ export default function App() {
   async function handleApplyToBank(bank) {
     if (!currentUser) {
       setApplyModalBank(bank);
+      setAuthMode("login");
+      setAuthStep("credentials");
+      setAuthOtp("");
+      setDemoOtpCode("");
+      setAuthError("");
       setAuthModalOpen(true);
       return;
     }
@@ -544,6 +634,10 @@ export default function App() {
                   setAuthMode("officer");
                   setAuthEmail("bank@smartloan.ai");
                   setAuthPassword("bank-demo123");
+                  setAuthStep("credentials");
+                  setAuthOtp("");
+                  setDemoOtpCode("");
+                  setAuthError("");
                   setAuthModalOpen(true);
                 }
               }}
@@ -571,6 +665,10 @@ export default function App() {
                 setAuthMode("login");
                 setAuthEmail("pranshu2@test.com");
                 setAuthPassword("Password123");
+                setAuthStep("credentials");
+                setAuthOtp("");
+                setDemoOtpCode("");
+                setAuthError("");
                 setAuthModalOpen(true);
               }}
             >
@@ -1262,8 +1360,9 @@ export default function App() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
                 <button
                   className="neo-btn neo-btn-primary"
-                  onClick={() => showToast("Provisional sanction letter generated.")}
+                  onClick={handleDownloadSanctionLetter}
                   style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}
+                  id="download-sanction-letter-btn"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -2150,7 +2249,7 @@ export default function App() {
       )}
 
       {/* =====================================================
-          AUTHENTICATION MODAL
+          AUTHENTICATION MODAL WITH 2-STEP OTP (2FA)
           ===================================================== */}
       {authModalOpen && (
         <div
@@ -2168,14 +2267,26 @@ export default function App() {
             padding: "20px"
           }}
         >
-          <div className="neo-card-lg" style={{ background: "var(--neo-white)", maxWidth: "440px", width: "100%" }}>
+          <div className="neo-card-lg" style={{ background: "var(--neo-white)", maxWidth: "460px", width: "100%" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ fontSize: "22px", textTransform: "uppercase" }}>
-                {authMode === "officer" ? "Bank Officer Login" : "Applicant Sign In"}
-              </h3>
+              <div>
+                <span style={{ fontSize: "10px", fontWeight: "800", textTransform: "uppercase", background: "var(--neo-yellow)", border: "1px solid #000", padding: "2px 6px", display: "inline-block", marginBottom: "4px" }}>
+                  {authStep === "credentials" ? "STEP 1 OF 2 // CREDENTIALS" : "STEP 2 OF 2 // 2FA VERIFICATION"}
+                </span>
+                <h3 style={{ fontSize: "22px", textTransform: "uppercase", margin: 0 }}>
+                  {authStep === "credentials"
+                    ? (authMode === "officer" ? "Bank Officer Login" : "Applicant Sign In")
+                    : "Enter 6-Digit OTP"}
+                </h3>
+              </div>
               <button
                 className="neo-btn neo-btn-white neo-btn-sm"
-                onClick={() => setAuthModalOpen(false)}
+                onClick={() => {
+                  setAuthModalOpen(false);
+                  setAuthStep("credentials");
+                  setAuthOtp("");
+                  setAuthError("");
+                }}
               >
                 ✕
               </button>
@@ -2188,46 +2299,139 @@ export default function App() {
               </div>
             )}
 
-            <form onSubmit={handleLoginSubmit}>
-              <div style={{ marginBottom: "14px" }}>
-                <label style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  required
-                  style={{ width: "100%", padding: "10px 12px", border: "var(--border-2px)", fontSize: "13px" }}
-                  value={authEmail}
-                  onChange={(e) => setAuthEmail(e.target.value)}
-                />
-              </div>
+            {authStep === "credentials" ? (
+              <form onSubmit={handleSendOtp}>
+                <div style={{ marginBottom: "14px" }}>
+                  <label style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    style={{ width: "100%", padding: "10px 12px", border: "var(--border-2px)", fontSize: "13px" }}
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                  />
+                </div>
 
-              <div style={{ marginBottom: "20px" }}>
-                <label style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
-                  Password
-                </label>
-                <input
-                  type="password"
-                  required
-                  style={{ width: "100%", padding: "10px 12px", border: "var(--border-2px)", fontSize: "13px" }}
-                  value={authPassword}
-                  onChange={(e) => setAuthPassword(e.target.value)}
-                />
-              </div>
+                <div style={{ marginBottom: "20px" }}>
+                  <label style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    style={{ width: "100%", padding: "10px 12px", border: "var(--border-2px)", fontSize: "13px" }}
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                  />
+                </div>
 
-              <button
-                type="submit"
-                className="neo-btn neo-btn-primary"
-                style={{ width: "100%", padding: "12px" }}
-                disabled={authLoading}
-              >
-                {authLoading ? "Authenticating..." : "Authorize Session →"}
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  className="neo-btn neo-btn-primary"
+                  style={{ width: "100%", padding: "12px" }}
+                  disabled={authLoading}
+                  id="auth-submit-credentials-btn"
+                >
+                  {authLoading ? "Authenticating..." : "Proceed to 2FA OTP →"}
+                </button>
 
-            <div style={{ marginTop: "16px", padding: "10px", background: "var(--neo-sage-tint)", border: "1px solid #000", fontSize: "11px", fontWeight: "600" }}>
-              <strong>[DEMO ACCESS CREDENTIALS]</strong> {authMode === "officer" ? "bank@smartloan.ai / bank-demo123" : "pranshu2@test.com / Password123"}
-            </div>
+                <div style={{ marginTop: "16px", padding: "10px", background: "var(--neo-sage-tint)", border: "1px solid #000", fontSize: "11px", fontWeight: "600" }}>
+                  <strong>[DEMO ACCESS CREDENTIALS]</strong> {authMode === "officer" ? "bank@smartloan.ai / bank-demo123" : "pranshu2@test.com / Password123"}
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyOtp}>
+                <p style={{ fontSize: "12px", color: "#444", marginBottom: "14px", lineHeight: "1.4" }}>
+                  A 6-digit One-Time Password (OTP) has been dispatched for <strong>{authEmail}</strong>. Enter the passcode below to authorize your session.
+                </p>
+
+                {demoOtpCode && (
+                  <div style={{ background: "var(--neo-yellow)", border: "var(--border-2px)", padding: "10px 12px", marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "11px", fontWeight: "800" }}>
+                    <div>
+                      <span style={{ display: "block", fontSize: "10px", color: "#555" }}>SIMULATED SMS / EMAIL OTP</span>
+                      <strong style={{ fontSize: "16px", letterSpacing: "3px", fontFamily: "monospace" }}>{demoOtpCode}</strong>
+                    </div>
+                    <button
+                      type="button"
+                      className="neo-btn neo-btn-white neo-btn-sm"
+                      style={{ padding: "4px 10px", fontSize: "11px" }}
+                      onClick={() => setAuthOtp(demoOtpCode)}
+                    >
+                      Use Code
+                    </button>
+                  </div>
+                )}
+
+                <div style={{ marginBottom: "18px" }}>
+                  <label style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
+                    Enter 6-Digit One-Time Password
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    autoFocus
+                    placeholder="• • • • • •"
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      border: "var(--border-2px)",
+                      fontSize: "24px",
+                      fontWeight: "800",
+                      letterSpacing: "10px",
+                      textAlign: "center",
+                      fontFamily: "monospace",
+                      background: "#fff",
+                      boxShadow: "3px 3px 0 #000"
+                    }}
+                    value={authOtp}
+                    onChange={(e) => setAuthOtp(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+                    id="auth-otp-input"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="neo-btn neo-btn-primary"
+                  style={{ width: "100%", padding: "12px", marginBottom: "12px" }}
+                  disabled={authLoading || authOtp.length !== 6}
+                  id="auth-verify-otp-btn"
+                >
+                  {authLoading ? "Verifying OTP..." : "Verify OTP & Authorize Session →"}
+                </button>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", marginTop: "10px" }}>
+                  <button
+                    type="button"
+                    style={{ background: "none", border: "none", cursor: "pointer", fontWeight: "800", textDecoration: "underline", padding: 0 }}
+                    onClick={() => {
+                      setAuthStep("credentials");
+                      setAuthError("");
+                    }}
+                  >
+                    ← Change Email / Back
+                  </button>
+
+                  <button
+                    type="button"
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: otpCountdown > 0 ? "not-allowed" : "pointer",
+                      fontWeight: "800",
+                      color: otpCountdown > 0 ? "#888" : "#000",
+                      padding: 0
+                    }}
+                    disabled={otpCountdown > 0}
+                    onClick={handleResendOtp}
+                  >
+                    {otpCountdown > 0 ? `Resend OTP in ${otpCountdown}s` : "Resend OTP Code"}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

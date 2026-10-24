@@ -120,6 +120,28 @@ export async function bankLogin(email, password) {
   });
 }
 
+// REQUEST LOGIN OTP (2FA Step 1)
+export async function sendLoginOtp(email, password) {
+  return request("/auth/send-login-otp", {
+    method: "POST",
+    body: JSON.stringify({ email, password })
+  });
+}
+
+// VERIFY LOGIN OTP (2FA Step 2)
+export async function verifyLoginOtp(email, otp) {
+  return request("/auth/verify-login-otp", {
+    method: "POST",
+    body: JSON.stringify({ email, otp })
+  });
+}
+
+// SANCTION LETTER PDF DOWNLOAD URL
+export function getSanctionLetterDownloadUrl(params = {}) {
+  const query = new URLSearchParams(params).toString();
+  return `${API_BASE_URL}/sanctions/provisional-letter.pdf${query ? `?${query}` : ""}`;
+}
+
 // ======================================================
 // APPLICANT PROFILE
 // ======================================================
