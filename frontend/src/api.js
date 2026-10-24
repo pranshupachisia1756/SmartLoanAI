@@ -161,6 +161,13 @@ export async function analyzeApplicant() {
   return request("/applicant/analyze", { method: "POST" });
 }
 
+export async function predictCondition(conditionData) {
+  return request("/ai/predict-condition", {
+    method: "POST",
+    body: JSON.stringify(conditionData)
+  });
+}
+
 export async function getPincode(pincode) {
   return request(`/pincode/${pincode}`, { method: "GET" });
 }
