@@ -47,7 +47,7 @@ from backend.services import (
     match_banks_for_applicant,
     simulate_what_if_scenario
 )
-from backend.documents import save_uploaded_document, upload_path
+from backend.documents import save_uploaded_document, upload_path, MANDATORY_DOC_TYPES
 from backend.sanction_pdf import generate_sanction_letter_pdf
 from ml.predict import predict_loan
 
@@ -675,6 +675,17 @@ def submit_loan_application(
     if not applicant:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Please complete profile before applying")
 
+    # ENFORCE ALL MANDATORY KYC DOCUMENTS ARE UPLOADED
+    uploaded_docs = db.query(Document).filter(Document.applicant_id == applicant.id).all()
+    uploaded_types = {d.document_type for d in uploaded_docs}
+    missing_docs = [req for req in MANDATORY_DOC_TYPES if req not in uploaded_types]
+
+    if missing_docs:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"KYC Verification Required: You must upload all 5 mandatory documents in the KYC Vault before applying for a loan. Missing: {', '.join(missing_docs)}"
+        )
+
     bank = db.query(Bank).filter(Bank.id == app_in.bank_id).first()
     if not bank:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Selected bank not found")
@@ -854,7 +865,35 @@ def get_bank_application_queue(
     for a in apps:
         app_cibil = a.applicant.cibil_score if a.applicant else 700
         risk = "Low" if app_cibil >= 750 else "Medium" if app_cibil >= 680 else "High"
-        doc_count = len(a.applicant.documents) if a.applicant else 0
+        docs = a.applicant.documents if a.applicant else []
+        doc_count = len(docs)
+
+        # Build detailed KYC checklist for each mandatory document
+        doc_checklist = []
+        for req_type in MANDATORY_DOC_TYPES:
+            found = next((d for d in docs if d.document_type == req_type), None)
+            if found:
+                doc_checklist.append({
+                    "id": found.id,
+                    "type": req_type,
+                    "uploaded": True,
+                    "file_name": found.file_name,
+                    "file_size": found.file_size,
+                    "review_status": found.review_status,
+                    "review_reason": found.review_reason
+                })
+            else:
+                doc_checklist.append({
+                    "id": None,
+                    "type": req_type,
+                    "uploaded": False,
+                    "file_name": None,
+                    "file_size": None,
+                    "review_status": "Missing",
+                    "review_reason": "Not uploaded by applicant"
+                })
+
+        all_uploaded = len([d for d in doc_checklist if d["uploaded"]]) == len(MANDATORY_DOC_TYPES)
 
         queue.append({
             "id": a.id,
@@ -866,6 +905,8 @@ def get_bank_application_queue(
             "cibil": app_cibil,
             "risk_level": risk,
             "documents": doc_count,
+            "documents_status": doc_checklist,
+            "all_documents_uploaded": all_uploaded,
             "status": a.status,
             "created_at": a.created_at.isoformat()
         })

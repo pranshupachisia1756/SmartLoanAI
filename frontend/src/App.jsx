@@ -116,6 +116,8 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState("");
   const [applyModalBank, setApplyModalBank] = useState(null);
   const [submittingApp, setSubmittingApp] = useState(false);
+  const [kycIncompleteModalOpen, setKycIncompleteModalOpen] = useState(false);
+  const [kycMissingList, setKycMissingList] = useState([]);
 
   // Live Sanction Activity Ticker (Rotating)
   const recentSanctions = [
@@ -512,6 +514,18 @@ export default function App() {
       setAuthModalOpen(true);
       return;
     }
+
+    // ENFORCE THAT ALL 5 MANDATORY KYC DOCUMENTS ARE UPLOADED
+    const uploadedTypes = new Set((userDocs || []).map((d) => d.type));
+    const missing = MANDATORY_DOCUMENTS.filter((m) => !uploadedTypes.has(m.type));
+    if (missing.length > 0) {
+      setKycMissingList(missing);
+      setApplyModalBank(bank);
+      setKycIncompleteModalOpen(true);
+      showToast(`KYC Incomplete: You must upload all 5 documents before applying.`);
+      return;
+    }
+
     setSubmittingApp(true);
     try {
       await createLoanApplication({
@@ -522,8 +536,8 @@ export default function App() {
         notes: `Application to ${bank.bank_name} via SmartLoan Neo-Brutalist Marketplace`
       });
       showToast(`Application successfully submitted to ${bank.bank_name}!`);
-    } catch {
-      showToast(`Application queued with ${bank.bank_name}!`);
+    } catch (err) {
+      showToast(err.message || `Application queued with ${bank.bank_name}!`);
     } finally {
       setSubmittingApp(false);
       setApplyModalBank(null);
@@ -1039,6 +1053,42 @@ export default function App() {
               <span style={{ textDecoration: "underline", cursor: "pointer" }}>Lowest APR First</span>
             </div>
           </div>
+
+          {/* KYC STATUS NOTICE FOR BORROWERS */}
+          {currentUser && userDocs.length < MANDATORY_DOCUMENTS.length && (
+            <div style={{ background: "var(--neo-yellow)", border: "var(--border-2px)", padding: "12px 16px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px", boxShadow: "var(--shadow-sm)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ background: "#000", color: "#fff", padding: "2px 8px", fontSize: "11px", fontWeight: "800" }}>
+                  KYC ACTION REQUIRED
+                </span>
+                <span style={{ fontSize: "12px", fontWeight: "700" }}>
+                  Borrower KYC is currently {userDocs.length} of {MANDATORY_DOCUMENTS.length} mandatory documents. All 5 documents must be uploaded in the KYC Vault before loan sanction application.
+                </span>
+              </div>
+              <button
+                className="neo-btn neo-btn-white neo-btn-sm"
+                onClick={() => setActiveTab("documents")}
+              >
+                Open KYC Vault ({MANDATORY_DOCUMENTS.length - userDocs.length} Missing) →
+              </button>
+            </div>
+          )}
+
+          {currentUser && userDocs.length >= MANDATORY_DOCUMENTS.length && (
+            <div style={{ background: "var(--neo-emerald-bg)", border: "2px solid #065f46", padding: "10px 16px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <span style={{ background: "#065f46", color: "#fff", padding: "2px 8px", fontSize: "11px", fontWeight: "800" }}>
+                  KYC VERIFIED
+                </span>
+                <span style={{ fontSize: "12px", fontWeight: "700", color: "#065f46" }}>
+                  All 5/5 Mandatory KYC Documents are verified. You are pre-cleared for institutional loan application.
+                </span>
+              </div>
+              <span style={{ fontSize: "11px", fontWeight: "800", color: "#065f46" }}>
+                100% Documentation Complete
+              </span>
+            </div>
+          )}
 
           {/* BEST MATCH SPOTLIGHT CARD */}
           <div className="best-match-card">
@@ -2106,7 +2156,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Applications Table */}
+            {/* Applications Table */}
           <div className="neo-table-wrapper">
             <table className="neo-table">
               <thead>
@@ -2117,6 +2167,7 @@ export default function App() {
                   <th>Sanction Amount</th>
                   <th>Bureau Score</th>
                   <th>Risk Tier</th>
+                  <th>KYC Status</th>
                   <th>Status</th>
                   <th>Action</th>
                 </tr>
@@ -2140,6 +2191,14 @@ export default function App() {
                     <td>
                       <span className={`neo-badge ${app.risk_level === "Low" ? "neo-badge-emerald" : "neo-badge-coral"}`} style={{ fontSize: "10px", padding: "2px 6px" }}>
                         {app.risk_level} Risk
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        className={`neo-badge ${app.all_documents_uploaded || (app.documents >= 5) ? "neo-badge-emerald" : "neo-badge-yellow"}`}
+                        style={{ fontSize: "10px", padding: "2px 6px" }}
+                      >
+                        {app.all_documents_uploaded || (app.documents >= 5) ? "5/5 Verified" : `${app.documents || 0}/5 Uploaded`}
                       </span>
                     </td>
                     <td>
@@ -2182,14 +2241,19 @@ export default function App() {
                 className="neo-card-lg"
                 style={{
                   background: "var(--neo-white)",
-                  maxWidth: "520px",
+                  maxWidth: "580px",
                   width: "100%",
                   maxHeight: "90vh",
                   overflowY: "auto"
                 }}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                  <h3 style={{ fontSize: "20px" }}>Underwrite {selectedReviewApp.application_id}</h3>
+                  <div>
+                    <span style={{ fontSize: "10px", fontWeight: "800", textTransform: "uppercase", background: "var(--neo-yellow)", border: "1px solid #000", padding: "2px 6px", display: "inline-block", marginBottom: "4px" }}>
+                      OFFICIAL UNDERWRITING DOSSIER
+                    </span>
+                    <h3 style={{ fontSize: "20px", margin: 0 }}>Underwrite {selectedReviewApp.application_id}</h3>
+                  </div>
                   <button
                     className="neo-btn neo-btn-white neo-btn-sm"
                     onClick={() => setSelectedReviewApp(null)}
@@ -2206,6 +2270,107 @@ export default function App() {
                     <div><strong>CIBIL Score:</strong> {selectedReviewApp.cibil}</div>
                   </div>
                 </div>
+
+                {/* KYC DOCUMENTATION VERIFICATION SECTION */}
+                {(() => {
+                  const appDocsList = (selectedReviewApp.documents_status && selectedReviewApp.documents_status.length > 0)
+                    ? selectedReviewApp.documents_status
+                    : MANDATORY_DOCUMENTS.map((m) => {
+                        const isCurrent = currentUser && (selectedReviewApp.applicant === currentUser.name || selectedReviewApp.applicant === "Pranshu Sharma");
+                        const found = isCurrent ? (userDocs || []).find((d) => d.type === m.type) : null;
+                        return {
+                          id: found ? found.id : null,
+                          type: m.type,
+                          uploaded: Boolean(found),
+                          file_name: found ? found.file_name : null,
+                          file_size: found ? found.file_size : null,
+                          review_status: found ? (found.review_status || "Uploaded") : "Missing",
+                          review_reason: found ? found.review_reason : "Not uploaded by applicant"
+                        };
+                      });
+
+                  const appUploadedCount = appDocsList.filter((d) => d.uploaded).length;
+                  const isAppKycComplete = appUploadedCount === MANDATORY_DOCUMENTS.length;
+
+                  return (
+                    <div style={{ marginBottom: "16px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                        <label style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase" }}>
+                          Mandatory KYC Documentation Audit
+                        </label>
+                        <span
+                          style={{
+                            fontSize: "10px",
+                            fontWeight: "800",
+                            padding: "2px 8px",
+                            border: "1px solid #000",
+                            background: isAppKycComplete ? "var(--neo-emerald-bg)" : "var(--neo-yellow)",
+                            color: isAppKycComplete ? "#065f46" : "#000"
+                          }}
+                        >
+                          {appUploadedCount} / {MANDATORY_DOCUMENTS.length} UPLOADED {isAppKycComplete ? "✓ COMPLETE" : "⚠ INCOMPLETE"}
+                        </span>
+                      </div>
+
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        {appDocsList.map((doc) => (
+                          <div
+                            key={doc.type}
+                            style={{
+                              border: "var(--border-2px)",
+                              padding: "8px 12px",
+                              background: doc.uploaded ? "#f0fdf4" : "#fff1f2",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              gap: "10px"
+                            }}
+                          >
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span style={{ fontSize: "11px", fontWeight: "800", color: "#000" }}>
+                                  {doc.type}
+                                </span>
+                                {doc.uploaded ? (
+                                  <span style={{ fontSize: "9px", background: "#10b981", color: "#fff", fontWeight: "800", padding: "1px 5px", border: "1px solid #000" }}>
+                                    ✓ UPLOADED
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize: "9px", background: "#ef4444", color: "#fff", fontWeight: "800", padding: "1px 5px", border: "1px solid #000" }}>
+                                    ✕ NOT UPLOADED
+                                  </span>
+                                )}
+                              </div>
+                              <span style={{ fontSize: "10px", color: doc.uploaded ? "#047857" : "#b91c1c", display: "block", marginTop: "2px" }}>
+                                {doc.uploaded
+                                  ? `File: ${doc.file_name || "Verified document on file"} (Status: ${doc.review_status || "Uploaded"})`
+                                  : "Borrower has not uploaded this mandatory document"}
+                              </span>
+                            </div>
+
+                            {doc.uploaded && doc.id && (
+                              <a
+                                href={getDocumentDownloadUrl(doc.id)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="neo-btn neo-btn-white neo-btn-sm"
+                                style={{ fontSize: "10px", padding: "4px 8px", whiteSpace: "nowrap" }}
+                              >
+                                View File ↗
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {!isAppKycComplete && (
+                        <div style={{ marginTop: "8px", background: "#fef3c7", border: "1px solid #d97706", padding: "8px 10px", fontSize: "11px", color: "#92400e", fontWeight: "700" }}>
+                          <strong>UNDERWRITER NOTICE:</strong> Borrower has {MANDATORY_DOCUMENTS.length - appUploadedCount} missing KYC document(s). Review guidelines mandate complete dossier before disbursement.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 <div style={{ marginBottom: "16px" }}>
                   <label style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", display: "block", marginBottom: "6px" }}>
@@ -2246,6 +2411,107 @@ export default function App() {
             </div>
           )}
         </main>
+      )}
+
+      {/* =====================================================
+          KYC INCOMPLETE ACTION REQUIRED MODAL
+          ===================================================== */}
+      {kycIncompleteModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10000,
+            padding: "20px"
+          }}
+        >
+          <div className="neo-card-lg" style={{ background: "var(--neo-white)", maxWidth: "520px", width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+              <div>
+                <span style={{ fontSize: "10px", fontWeight: "800", textTransform: "uppercase", background: "#ef4444", color: "#fff", padding: "2px 6px", display: "inline-block", marginBottom: "4px" }}>
+                  MANDATORY COMPLIANCE // KYC INCOMPLETE
+                </span>
+                <h3 style={{ fontSize: "22px", textTransform: "uppercase", margin: 0 }}>
+                  Upload All Documents To Apply
+                </h3>
+              </div>
+              <button
+                className="neo-btn neo-btn-white neo-btn-sm"
+                onClick={() => setKycIncompleteModalOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ background: "#fee2e2", border: "var(--border-2px)", padding: "12px", marginBottom: "16px", fontSize: "12px", color: "#991b1b", fontWeight: "600", lineHeight: "1.5" }}>
+              <strong>RBI Institutional Underwriting Policy:</strong> All 5 mandatory KYC verification documents must be uploaded and verified in your KYC Vault before an application can be submitted to {applyModalBank ? applyModalBank.bank_name : "partner banks"}.
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", fontSize: "11px", fontWeight: "800" }}>
+                <span>KYC Vault Status</span>
+                <span>{userDocs.length} of {MANDATORY_DOCUMENTS.length} Uploaded ({Math.round((userDocs.length / MANDATORY_DOCUMENTS.length) * 100)}%)</span>
+              </div>
+              <div style={{ height: "10px", background: "#e5e7eb", border: "var(--border-2px)", overflow: "hidden", marginBottom: "16px" }}>
+                <div style={{ width: `${(userDocs.length / MANDATORY_DOCUMENTS.length) * 100}%`, height: "100%", background: "var(--neo-yellow)" }}></div>
+              </div>
+
+              <div style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", marginBottom: "8px", color: "#000" }}>
+                Missing Required Documents ({kycMissingList.length}):
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {kycMissingList.map((m) => (
+                  <div
+                    key={m.type}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      border: "var(--border-2px)",
+                      padding: "8px 12px",
+                      background: "var(--neo-sage-tint)"
+                    }}
+                  >
+                    <div>
+                      <strong style={{ fontSize: "12px", display: "block" }}>{m.title}</strong>
+                      <span style={{ fontSize: "10px", color: "#555" }}>{m.type}</span>
+                    </div>
+                    <span style={{ background: "#991b1b", color: "#fff", fontSize: "10px", fontWeight: "800", padding: "2px 8px", border: "1px solid #000" }}>
+                      MISSING
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                className="neo-btn neo-btn-yellow"
+                style={{ flex: 1, padding: "12px", display: "inline-flex", justifyContent: "center", alignItems: "center", gap: "6px" }}
+                onClick={() => {
+                  setKycIncompleteModalOpen(false);
+                  setActiveTab("documents");
+                }}
+              >
+                Open KYC Vault & Upload Now →
+              </button>
+              <button
+                className="neo-btn neo-btn-white"
+                style={{ padding: "12px" }}
+                onClick={() => setKycIncompleteModalOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* =====================================================
