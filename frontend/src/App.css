@@ -891,6 +891,86 @@ button, input, select, textarea {
   letter-spacing: -0.02em;
 }
 
+/* Marketplace Loan Recovery & Rejection Improvement Guide */
+.recovery-roadmap-box {
+  background: var(--neo-cream, #fffdf5);
+  border: var(--border-2px);
+  padding: 20px;
+  margin-top: 24px;
+  box-shadow: var(--shadow-sm);
+}
+
+.recovery-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.recovery-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.recovery-step-item {
+  background: #ffffff;
+  border: var(--border-2px);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.recovery-step-item:hover {
+  border-color: #000;
+  box-shadow: var(--shadow-md);
+}
+
+.recovery-step-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+  gap: 6px;
+}
+
+.recovery-step-num {
+  font-size: 11px;
+  font-weight: 800;
+  color: #4b5851;
+}
+
+.recovery-impact-tag {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border: 1px solid #000;
+  background: var(--neo-yellow);
+}
+
+.recovery-impact-tag.green {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.recovery-step-title {
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.recovery-step-desc {
+  font-size: 11px;
+  color: #444;
+  line-height: 1.4;
+  margin: 0;
+}
+
 /* Alternative sanctions 4-grid */
 .alt-sanctions-grid {
   display: grid;

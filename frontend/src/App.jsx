@@ -726,6 +726,18 @@ export default function App() {
   const altBanks = displayList.slice(1, 5);
   const ledgerBanks = displayList.slice(5);
 
+  // Dynamic loan approval probability from ML prediction engine
+  const dynamicApprovalPct = conditionResult && conditionResult.approval_probability !== undefined ? conditionResult.approval_probability : 98.2;
+
+  function getLenderApprovalOdds(bank, baseOdds) {
+    let odds = baseOdds;
+    if (bank.bank_type === "Public Lender") odds = Math.max(0, odds - 2.8);
+    else if (bank.bank_name.includes("IDFC")) odds = Math.min(99.8, odds + 0.6);
+    else if (bank.bank_name.includes("Axis")) odds = Math.max(0, odds - 3.4);
+    else if (bank.bank_name.includes("ICICI")) odds = Math.min(99.4, odds - 1.1);
+    return Math.min(99.8, Math.max(0, Number(odds.toFixed(1))));
+  }
+
   return (
     <div className="neo-canvas">
       {/* =====================================================
@@ -1242,67 +1254,142 @@ export default function App() {
 
           {/* BEST MATCH SPOTLIGHT CARD */}
           <div className="best-match-card">
-            <div className="best-match-top-row">
-              <span className="neo-badge neo-badge-yellow">BEST ALGORITHMIC MATCH // 98.2%</span>
-              <span className="neo-badge neo-badge-white">Pre-Approved NetBanking Disbursal</span>
-              <span style={{ marginLeft: "auto", fontSize: "11px", fontWeight: "800", color: "#064e3b", display: "flex", alignItems: "center", gap: "6px" }}>
-                <span className="status-dot-green"></span> INSTANT API LINKED
+            <div className="best-match-top-row" style={{ flexWrap: "wrap" }}>
+              <span
+                className="neo-badge"
+                style={{
+                  background: dynamicApprovalPct >= 70 ? "var(--neo-yellow)" : "#fee2e2",
+                  color: dynamicApprovalPct >= 70 ? "var(--neo-black)" : "#991b1b",
+                  fontSize: "12px",
+                  border: "2px solid #000"
+                }}
+              >
+                BEST ALGORITHMIC MATCH // {dynamicApprovalPct.toFixed(1)}% APPROVAL PROBABILITY
+              </span>
+              <span
+                className="neo-badge"
+                style={{
+                  background: dynamicApprovalPct >= 70 ? "#d1fae5" : "#fef3c7",
+                  color: dynamicApprovalPct >= 70 ? "#065f46" : "#92400e"
+                }}
+              >
+                {dynamicApprovalPct >= 70 ? "Pre-Approved NetBanking Disbursal" : "High Risk Delinquency // Recovery Plan Active"}
+              </span>
+              <span style={{ marginLeft: "auto", fontSize: "11px", fontWeight: "800", color: dynamicApprovalPct >= 70 ? "#064e3b" : "#dc2626", display: "flex", alignItems: "center", gap: "6px" }}>
+                <span
+                  className={dynamicApprovalPct >= 70 ? "status-dot-green" : ""}
+                  style={dynamicApprovalPct < 70 ? { width: "8px", height: "8px", background: "#ef4444", borderRadius: "50%", display: "inline-block" } : {}}
+                ></span>
+                {dynamicApprovalPct >= 70 ? "INSTANT API LINKED" : "RECOVERY STEPS AVAILABLE"}
               </span>
             </div>
 
             <div className="best-match-layout">
               <div className="bank-profile-col">
                 <div className="bank-logo-box">H</div>
-                <div>
+                <div style={{ width: "100%" }}>
                   <h2 style={{ fontSize: "24px", margin: "0 0 4px" }}>{bestMatch.bank_name}</h2>
                   <span style={{ fontSize: "11px", fontWeight: "700", color: "#555", display: "block", marginBottom: "8px" }}>
                     Tier-1 Scheduled Commercial Bank
                   </span>
                   <p style={{ margin: 0, fontSize: "12px", color: "#333", lineHeight: "1.5" }}>
-                    {bestMatch.recommendation || "Automated underwriting matched your salary and CIBIL profile. Direct netbanking disbursement within 2 minutes."}
+                    {dynamicApprovalPct >= 70
+                      ? (bestMatch.recommendation || "Automated underwriting matched your salary and CIBIL profile. Direct netbanking disbursement within 2 minutes.")
+                      : "Underwriting model flagged elevated default risk or high utilization. Review the rejection improvement steps below to re-qualify."}
                   </p>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", marginTop: "8px", fontSize: "11px", color: "#666", fontWeight: "600" }}>
                     <span className="status-dot-green" style={{ width: "6px", height: "6px" }}></span>
                     Median Disbursal Time: 114 seconds
                   </span>
+
+                  {/* Live Approval Percentage Meter */}
+                  <div style={{ marginTop: "12px", padding: "8px 12px", border: "1.5px solid #000", background: dynamicApprovalPct >= 70 ? "#ecfdf5" : "#fef2f2" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                      <span style={{ fontSize: "10px", fontWeight: "800", textTransform: "uppercase", color: dynamicApprovalPct >= 70 ? "#065f46" : "#991b1b" }}>
+                        Approval Probability: {dynamicApprovalPct.toFixed(1)}%
+                      </span>
+                      <span style={{ fontSize: "9px", fontWeight: "800", color: dynamicApprovalPct >= 70 ? "#059669" : "#dc2626" }}>
+                        {dynamicApprovalPct >= 80 ? "PRIME CLEARANCE" : dynamicApprovalPct >= 60 ? "NEAR-PRIME" : "REJECTION SENSITIVITY"}
+                      </span>
+                    </div>
+                    <div style={{ height: "6px", background: "#cbd5e1", border: "1px solid #000", overflow: "hidden" }}>
+                      <div
+                        style={{
+                          width: `${Math.max(5, Math.min(100, dynamicApprovalPct))}%`,
+                          height: "100%",
+                          background: dynamicApprovalPct >= 70 ? "#10b981" : dynamicApprovalPct >= 40 ? "#f59e0b" : "#ef4444",
+                          transition: "width 0.4s ease"
+                        }}
+                      ></div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div className="metrics-quad-grid">
                 <div className="metric-quad-item">
                   <span>Approved Capital</span>
-                  <strong>{bestMatch.max_sanction_offered_display || "₹13,10,000"}</strong>
-                  <span style={{ color: "#059669", fontSize: "9px" }}>100% of Request</span>
+                  <strong>
+                    {conditionResult.max_loan_sanction > 0
+                      ? "₹" + Number(conditionResult.max_loan_sanction).toLocaleString("en-IN")
+                      : (dynamicApprovalPct >= 70 ? (bestMatch.max_sanction_offered_display || "₹13,10,000") : "₹0 (Action Req)")}
+                  </strong>
+                  <span style={{ color: dynamicApprovalPct >= 70 ? "#059669" : "#dc2626", fontSize: "9px" }}>
+                    {dynamicApprovalPct >= 70 ? "100% of Request Cleared" : "Requires Recovery"}
+                  </span>
                 </div>
 
                 <div className="metric-quad-item yellow-tinted">
                   <span>Interest Rate</span>
-                  <strong>{bestMatch.interest_rate_min ? `${bestMatch.interest_rate_min}%` : "10.35%"}</strong>
-                  <span style={{ fontSize: "9px" }}>Fixed Annual APR</span>
+                  <strong>{(conditionResult.algorithmic_rate || bestMatch.interest_rate_min || 10.35).toFixed(2)}%</strong>
+                  <span style={{ fontSize: "9px" }}>Repo-Linked Annual APR</span>
                 </div>
 
                 <div className="metric-quad-item">
                   <span>Monthly Repayment</span>
-                  <strong>₹{Number(bestMatch.estimated_monthly_emi || 42520).toLocaleString("en-IN")}</strong>
+                  <strong>
+                    ₹{Math.round(
+                      (((conditionResult.max_loan_sanction > 0 ? conditionResult.max_loan_sanction : requiredCapital) || 1310000) *
+                        ((conditionResult.algorithmic_rate || 10.35) / 1200) *
+                        Math.pow(1 + (conditionResult.algorithmic_rate || 10.35) / 1200, loanHorizon)) /
+                        (Math.pow(1 + (conditionResult.algorithmic_rate || 10.35) / 1200, loanHorizon) - 1) || 42520
+                    ).toLocaleString("en-IN")}
+                  </strong>
                   <span style={{ fontSize: "9px" }}>{loanHorizon} Mo. Horizon</span>
                 </div>
 
                 <div className="metric-quad-item tinted">
-                  <span>Processing Toll</span>
-                  <strong>₹999</strong>
-                  <span style={{ color: "#059669", fontSize: "9px" }}>Waived 80% via SmartLoan</span>
+                  <span>Underwriting Status</span>
+                  <strong style={{ fontSize: "16px", color: dynamicApprovalPct >= 70 ? "#065f46" : "#991b1b" }}>
+                    {dynamicApprovalPct >= 70 ? "Pre-Sanctioned" : "Decline Warning"}
+                  </strong>
+                  <span style={{ color: dynamicApprovalPct >= 70 ? "#059669" : "#dc2626", fontSize: "9px" }}>
+                    {dynamicApprovalPct >= 70 ? "100% Fee Waiver Applied" : "FOIR Optimization Needed"}
+                  </span>
                 </div>
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <button
-                  className="neo-btn neo-btn-primary"
-                  style={{ width: "100%", padding: "14px" }}
-                  onClick={() => handleApplyToBank(bestMatch)}
-                  disabled={submittingApp}
-                >
-                  {submittingApp ? "Disbursing..." : "Claim Disbursal →"}
-                </button>
+                {dynamicApprovalPct >= 70 ? (
+                  <button
+                    className="neo-btn neo-btn-primary"
+                    style={{ width: "100%", padding: "14px" }}
+                    onClick={() => handleApplyToBank(bestMatch)}
+                    disabled={submittingApp}
+                    id="claim-disbursal-btn"
+                  >
+                    {submittingApp ? "Disbursing..." : "Claim Disbursal →"}
+                  </button>
+                ) : (
+                  <button
+                    className="neo-btn neo-btn-yellow"
+                    style={{ width: "100%", padding: "14px" }}
+                    onClick={() => setActiveTab("verdict")}
+                    id="boost-approval-odds-btn"
+                  >
+                    Boost Approval Odds in AI Terminal ▷
+                  </button>
+                )}
                 <button
                   className="neo-btn neo-btn-white"
                   style={{ width: "100%", fontSize: "12px", padding: "8px" }}
@@ -1315,6 +1402,106 @@ export default function App() {
                 </span>
               </div>
             </div>
+
+            {/* ACTIONABLE LOAN RECOVERY & APPROVAL IMPROVEMENT ROADMAP */}
+            <div className="recovery-roadmap-box">
+              <div className="recovery-header-row">
+                <div>
+                  <span className="neo-badge neo-badge-charcoal" style={{ fontSize: "9px", marginBottom: "4px" }}>
+                    INSTITUTIONAL UNDERWRITING PROTOCOL
+                  </span>
+                  <h3 style={{ fontSize: "18px", textTransform: "uppercase", margin: "4px 0 2px" }}>
+                    How Can Your Loan Be Improved If Rejected Or Risk Is High?
+                  </h3>
+                  <p style={{ margin: 0, fontSize: "12px", color: "#444" }}>
+                    Underwriting models reject retail loans when debt-to-income (FOIR) exceeds 45%, card utilization peaks &gt;30%, or recent delinquency flags exist. Apply these 5 proven levers to turn a rejection into instant approval:
+                  </p>
+                </div>
+                <button
+                  className="neo-btn neo-btn-yellow neo-btn-sm"
+                  onClick={() => setActiveTab("verdict")}
+                  id="open-terminal-from-recovery-btn"
+                >
+                  Test Levers in AI Terminal ▷
+                </button>
+              </div>
+
+              <div className="recovery-steps-grid">
+                <div className="recovery-step-item">
+                  <div>
+                    <div className="recovery-step-top">
+                      <span className="recovery-step-num">LEVER 01 / REVOLVING DEBT</span>
+                      <span className="recovery-impact-tag green">+25% TO +35% ODDS</span>
+                    </div>
+                    <div className="recovery-step-title">Reduce Card Spend Below 20%</div>
+                    <p className="recovery-step-desc">
+                      High utilization tags applicant as cash-strapped. Paying down card balances below 20% immediately clears the risk flag and adds 30-50 CIBIL points.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="recovery-step-item">
+                  <div>
+                    <div className="recovery-step-top">
+                      <span className="recovery-step-num">LEVER 02 / CAPACITY EXPANDER</span>
+                      <span className="recovery-impact-tag green">+40% ODDS • +₹35L CAP</span>
+                    </div>
+                    <div className="recovery-step-title">Add Co-Applicant (&gt;700 Bureau Score)</div>
+                    <p className="recovery-step-desc">
+                      Adding an earning spouse or parent pools verified net income, cutting your Fixed Obligation to Income Ratio (FOIR) in half and bypassing solo eligibility limits.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="recovery-step-item">
+                  <div>
+                    <div className="recovery-step-top">
+                      <span className="recovery-step-num">LEVER 03 / CASHFLOW OPTIMIZER</span>
+                      <span className="recovery-impact-tag">LOWERS EMI BY ~45%</span>
+                    </div>
+                    <div className="recovery-step-title">Extend Loan Tenor (e.g., 60 Months)</div>
+                    <p className="recovery-step-desc">
+                      Spreading principal repayment over 60 or 72 months reduces monthly burden from ₹42k to under ₹22k, bringing obligations safely inside the RBI statutory 40% cap.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="recovery-step-item">
+                  <div>
+                    <div className="recovery-step-top">
+                      <span className="recovery-step-num">LEVER 04 / MANDATE CLEARANCE</span>
+                      <span className="recovery-impact-tag green">+15% ODDS • -25 BPS</span>
+                    </div>
+                    <div className="recovery-step-title">Set Up Automated e-NACH Mandate</div>
+                    <p className="recovery-step-desc">
+                      Digital recurring debit registration via UPI/NetBanking eliminates paper bounce risks and unlocks priority fast-track clearance with Tier-1 consortium lenders.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="recovery-step-item" style={{ gridColumn: "1 / -1" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                    <div>
+                      <div className="recovery-step-top">
+                        <span className="recovery-step-num">LEVER 05 / VINTAGE RESTORATION</span>
+                        <span className="recovery-impact-tag">DELINQUENCY RESET</span>
+                      </div>
+                      <div className="recovery-step-title">Maintain a 60-Day Clean Payment Cycle</div>
+                      <p className="recovery-step-desc">
+                        If past late payments or missed EMIs triggered a rejection, clearing all overdue balances and maintaining 2 consecutive on-time cycles resets the underwriting default sensitivity.
+                      </p>
+                    </div>
+                    <button
+                      className="neo-btn neo-btn-primary neo-btn-sm"
+                      onClick={() => setActiveTab("calculator")}
+                      id="recalculate-emi-sandbox-btn"
+                    >
+                      Recalculate EMI in Sandbox →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* ACTIVE ALTERNATIVE SANCTIONS (4-GRID) */}
@@ -1323,55 +1510,70 @@ export default function App() {
               <h3 style={{ fontSize: "20px", textTransform: "uppercase" }}>Active Alternative Sanctions</h3>
               <p style={{ margin: 0, fontSize: "12px", color: "#444" }}>Ranked automatically against your automated risk profile.</p>
             </div>
-            <span className="neo-badge neo-badge-white">4 Pre-Approved</span>
+            <span className="neo-badge neo-badge-white">
+              {dynamicApprovalPct >= 70 ? "4 Pre-Approved" : "4 Sanction Alternatives"}
+            </span>
           </div>
 
           <div className="alt-sanctions-grid">
-            {altBanks.map((b) => (
-              <div key={b.bank_name} className="alt-bank-card">
-                <div className="alt-bank-header">
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <div style={{ width: "32px", height: "32px", background: "#000", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", fontSize: "14px", border: "1px solid #000" }}>
-                      {b.bank_name.slice(0, 2).toUpperCase()}
+            {altBanks.map((b) => {
+              const lenderOdds = getLenderApprovalOdds(b, dynamicApprovalPct);
+              return (
+                <div key={b.bank_name} className="alt-bank-card">
+                  <div className="alt-bank-header">
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div style={{ width: "32px", height: "32px", background: "#000", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", fontSize: "14px", border: "1px solid #000" }}>
+                        {b.bank_name.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div>
+                        <strong style={{ display: "block", fontSize: "14px" }}>{b.bank_name}</strong>
+                        <span style={{ fontSize: "10px", color: "#666" }}>{b.bank_type}</span>
+                      </div>
                     </div>
-                    <div>
-                      <strong style={{ display: "block", fontSize: "14px" }}>{b.bank_name}</strong>
-                      <span style={{ fontSize: "10px", color: "#666" }}>{b.bank_type}</span>
+                    <span
+                      className="neo-badge"
+                      style={{
+                        fontSize: "9px",
+                        padding: "2px 6px",
+                        background: lenderOdds >= 70 ? "var(--neo-yellow)" : "#fee2e2",
+                        color: lenderOdds >= 70 ? "#000" : "#991b1b"
+                      }}
+                    >
+                      {lenderOdds}% Approval Odds
+                    </span>
+                  </div>
+
+                  <div className="alt-bank-metrics">
+                    <div className="alt-metric">
+                      <span>Interest</span>
+                      <strong>{b.interest_rate_min}%</strong>
+                    </div>
+                    <div className="alt-metric">
+                      <span>Monthly EMI</span>
+                      <strong>₹{Number(b.estimated_monthly_emi || 0).toLocaleString("en-IN")}</strong>
+                    </div>
+                    <div className="alt-metric">
+                      <span>Max Sanction</span>
+                      <strong style={{ color: lenderOdds >= 70 ? "#064e3b" : "#dc2626" }}>
+                        {lenderOdds >= 70 ? (b.max_sanction_offered_display || "₹12L") : "Needs Action"}
+                      </strong>
                     </div>
                   </div>
-                  <span className="neo-badge neo-badge-yellow" style={{ fontSize: "9px", padding: "2px 6px" }}>
-                    {b.approval_time_display}
-                  </span>
-                </div>
 
-                <div className="alt-bank-metrics">
-                  <div className="alt-metric">
-                    <span>Interest</span>
-                    <strong>{b.interest_rate_min}%</strong>
-                  </div>
-                  <div className="alt-metric">
-                    <span>Monthly EMI</span>
-                    <strong>₹{Number(b.estimated_monthly_emi || 0).toLocaleString("en-IN")}</strong>
-                  </div>
-                  <div className="alt-metric">
-                    <span>Max Sanction</span>
-                    <strong style={{ color: "#064e3b" }}>{b.max_sanction_offered_display || "₹12L"}</strong>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #eee", paddingTop: "12px" }}>
+                    <span style={{ fontSize: "11px", color: "#555", fontWeight: "600" }}>
+                      {b.product_name.slice(0, 20)}...
+                    </span>
+                    <button
+                      className="neo-btn neo-btn-primary neo-btn-sm"
+                      onClick={() => handleApplyToBank(b)}
+                    >
+                      {lenderOdds >= 70 ? "Lock In →" : "Review →"}
+                    </button>
                   </div>
                 </div>
-
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #eee", paddingTop: "12px" }}>
-                  <span style={{ fontSize: "11px", color: "#555", fontWeight: "600" }}>
-                    {b.product_name.slice(0, 20)}...
-                  </span>
-                  <button
-                    className="neo-btn neo-btn-primary neo-btn-sm"
-                    onClick={() => handleApplyToBank(b)}
-                  >
-                    Lock In →
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* UNDERWRITING CLEARINGHOUSE LEDGER (EXTENDED TABLE) */}
